@@ -1,11 +1,11 @@
-vendor/
-node_modules/
+vendor
+node_modules
 npm-debug.log
 yarn-error.log
 
 # Laravel 4 specific
 bootstrap/compiled.php
-app/storage/
+app/storage
 
 # Laravel 5 & Lumen specific
 public/storage
@@ -28,3 +28,37 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+
+# Laravel folders
+vendor
+node_modules
+public/storage
+storage/*.key
+storage/app/public
+storage/debugbar
+
+# Laravel files
+.env
+.env.*
+.phpunit.result.cache
+Homestead.yaml
+Homestead.json
+npm-debug.log
+yarn-error.log
+.env.backup
+
+# IDEs and OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Composer & Laravel caches
+composer.lock
+composer.phar
+
+# Laravel Sail
+docker-compose.override.yml
+
+# Laravel Telescope (se estiver usando)
+storage/telescope
