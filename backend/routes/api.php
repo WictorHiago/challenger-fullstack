@@ -33,15 +33,35 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     
-    // Rotas de usuários
-    Route::apiResource('users', UserController::class);
+    // Rotas acessíveis por usuários comuns (role: user)
+    Route::middleware('role:user')->group(function () {
+        // Listar produtos
+        Route::get('products', [ProductController::class, 'index']);
+        Route::get('products/search/{term}', [ProductController::class, 'search']);
+        Route::get('products/{product}', [ProductController::class, 'show']);
+        
+        // Criar produtos
+        Route::post('products', [ProductController::class, 'store']);
+        
+        // Listar categorias
+        Route::get('categories', [CategoryController::class, 'index']);
+        Route::get('categories/{category}', [CategoryController::class, 'show']);
+    });
     
-    // Rotas de categorias
-    Route::apiResource('categories', CategoryController::class);
-    
-    // Rotas de produtos
-    Route::apiResource('products', ProductController::class);
-    
-    // Rota de busca de produtos
-    Route::get('/products/search/{term}', [ProductController::class, 'search']);
+    // Rotas exclusivas para administradores (role: admin)
+    Route::middleware('role:admin')->group(function () {
+        // CRUD completo de usuários
+        Route::apiResource('users', UserController::class);
+        
+        // Operações de edição e exclusão de produtos
+        Route::put('products/{product}', [ProductController::class, 'update']);
+        Route::patch('products/{product}', [ProductController::class, 'update']);
+        Route::delete('products/{product}', [ProductController::class, 'destroy']);
+        
+        // CRUD completo de categorias (exceto listar e mostrar, que já estão disponíveis para users)
+        Route::post('categories', [CategoryController::class, 'store']);
+        Route::put('categories/{category}', [CategoryController::class, 'update']);
+        Route::patch('categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+    });
 });

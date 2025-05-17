@@ -18,6 +18,22 @@ php artisan migrate
 
 ## Documentação da API
 
+### Controle de Acesso
+
+A API implementa controle de acesso baseado em roles:
+
+- **Usuários com role "user"** podem:
+  - Listar produtos e categorias
+  - Ver detalhes de produtos e categorias
+  - Criar produtos
+  - Buscar produtos
+
+- **Usuários com role "admin"** podem:
+  - Realizar todas as operações que um usuário comum pode
+  - Gerenciar usuários (listar, criar, editar, excluir)
+  - Editar e excluir produtos
+  - Criar, editar e excluir categorias
+
 ### Autenticação
 
 #### Register
@@ -28,9 +44,20 @@ Body
 {
   "name": "oliver souza",
   "email": "oliver.souza@gmail.com",
-  "role": "admin",
+  "role": "admin",  // "admin" ou "user"
   "password": "admin@admin",
   "password_confirmation": "admin@admin"
+}
+
+Response
+{
+  "message": "User registered successfully",
+  "user": {
+    "name": "oliver souza",
+    "email": "oliver.souza@gmail.com",
+    "role": "admin"
+  },
+  "token": "1|laravel_sanctum_token..."
 }
 ```
 
@@ -91,7 +118,7 @@ Response
 
 ### Produtos
 
-#### Listar Produtos (com paginação)
+#### Listar Produtos (com paginação) [user, admin]
 ```
 GET http://localhost:8000/api/products
 
@@ -122,7 +149,7 @@ Response
 }
 ```
 
-#### Buscar Produtos
+#### Buscar Produtos [user, admin]
 ```
 GET http://localhost:8000/api/products/search/{termo}
 
@@ -134,7 +161,7 @@ Exemplo: GET http://localhost:8000/api/products/search/exemplo
 Response: Similar à listagem de produtos
 ```
 
-#### Obter Produto Específico
+#### Obter Produto Específico [user, admin]
 ```
 GET http://localhost:8000/api/products/{id}
 
@@ -160,7 +187,7 @@ Response
 }
 ```
 
-#### Criar Produto
+#### Criar Produto [user, admin]
 ```
 POST http://localhost:8000/api/products
 
@@ -193,7 +220,7 @@ Response
 }
 ```
 
-#### Atualizar Produto
+#### Atualizar Produto [admin]
 ```
 PUT http://localhost:8000/api/products/{id}
 
@@ -222,7 +249,7 @@ Response
 }
 ```
 
-#### Excluir Produto
+#### Excluir Produto [admin]
 ```
 DELETE http://localhost:8000/api/products/{id}
 
@@ -239,7 +266,7 @@ Response
 
 ### Categorias
 
-#### Listar Categorias
+#### Listar Categorias [user, admin]
 ```
 GET http://localhost:8000/api/categories
 
@@ -257,7 +284,7 @@ Response
 ]
 ```
 
-#### Obter Categoria Específica
+#### Obter Categoria Específica [user, admin]
 ```
 GET http://localhost:8000/api/categories/{id}
 
@@ -275,7 +302,7 @@ Response
 }
 ```
 
-#### Criar Categoria
+#### Criar Categoria [admin]
 ```
 POST http://localhost:8000/api/categories
 
@@ -297,7 +324,7 @@ Response
 }
 ```
 
-#### Atualizar Categoria
+#### Atualizar Categoria [admin]
 ```
 PUT http://localhost:8000/api/categories/{id}
 
@@ -321,7 +348,7 @@ Response
 }
 ```
 
-#### Excluir Categoria
+#### Excluir Categoria [admin]
 ```
 DELETE http://localhost:8000/api/categories/{id}
 
@@ -334,3 +361,164 @@ Response
 {
   "message": "Category deleted successfully"
 }
+```
+
+### Usuários (Apenas para Administradores)
+
+#### Listar Usuários [admin]
+```
+GET http://localhost:8000/api/users
+
+Headers
+Authorization: Bearer {token}
+
+Response
+{
+  "current_page": 1,
+  "data": [
+    {
+      "id": 1,
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "role": "admin",
+      "created_at": "2025-05-17T14:00:00.000000Z",
+      "updated_at": "2025-05-17T14:00:00.000000Z"
+    },
+    {
+      "id": 2,
+      "name": "Regular User",
+      "email": "user@example.com",
+      "role": "user",
+      "created_at": "2025-05-17T14:05:00.000000Z",
+      "updated_at": "2025-05-17T14:05:00.000000Z"
+    }
+  ],
+  "per_page": 10,
+  "total": 2
+}
+```
+
+#### Obter Usuário Específico [admin]
+```
+GET http://localhost:8000/api/users/{id}
+
+Headers
+Authorization: Bearer {token}
+
+Exemplo: GET http://localhost:8000/api/users/2
+
+Response
+{
+  "id": 2,
+  "name": "Regular User",
+  "email": "user@example.com",
+  "role": "user",
+  "created_at": "2025-05-17T14:05:00.000000Z",
+  "updated_at": "2025-05-17T14:05:00.000000Z"
+}
+```
+
+#### Criar Usuário [admin]
+```
+POST http://localhost:8000/api/users
+
+Headers
+Authorization: Bearer {token}
+Content-Type: application/json
+
+Body
+{
+  "name": "Novo Usuário",
+  "email": "novo@example.com",
+  "password": "senha123",
+  "role": "user"
+}
+
+Response
+{
+  "name": "Novo Usuário",
+  "email": "novo@example.com",
+  "role": "user",
+  "updated_at": "2025-05-17T14:45:00.000000Z",
+  "created_at": "2025-05-17T14:45:00.000000Z",
+  "id": 3
+}
+```
+
+#### Atualizar Usuário [admin]
+```
+PUT http://localhost:8000/api/users/{id}
+
+Headers
+Authorization: Bearer {token}
+Content-Type: application/json
+
+Exemplo: PUT http://localhost:8000/api/users/3
+
+Body
+{
+  "name": "Usuário Atualizado",
+  "role": "admin"
+}
+
+Response
+{
+  "id": 3,
+  "name": "Usuário Atualizado",
+  "email": "novo@example.com",
+  "role": "admin",
+  "created_at": "2025-05-17T14:45:00.000000Z",
+  "updated_at": "2025-05-17T14:50:00.000000Z"
+}
+```
+
+#### Excluir Usuário [admin]
+```
+DELETE http://localhost:8000/api/users/{id}
+
+Headers
+Authorization: Bearer {token}
+
+Exemplo: DELETE http://localhost:8000/api/users/3
+
+Response
+{
+  "message": "User deleted successfully"
+}
+```
+
+### Respostas de Erro
+
+#### Erro de Autenticação (401 Unauthorized)
+```
+{
+  "message": "Unauthenticated. Invalid or expired token.",
+  "error": "Unauthorized",
+  "status_code": 401
+}
+```
+
+#### Erro de Permissão (403 Forbidden)
+```
+{
+  "message": "You do not have permission to access this resource",
+  "error": "Forbidden",
+  "status_code": 403
+}
+```
+
+#### Erro de Validação (422 Unprocessable Entity)
+```
+{
+  "message": "Validation error",
+  "errors": {
+    "name": [
+      "The name field is required."
+    ],
+    "email": [
+      "The email has already been taken."
+    ]
+  },
+  "status_code": 422
+}
+```
