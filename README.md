@@ -14,6 +14,7 @@ cd backend
 composer install
 php artisan install:api
 php artisan migrate
+php artisan db:seed
 ```
 
 ## Documentação da API
