@@ -5,3 +5,10 @@ instalação do projeto
 
 ## crie o container docker com banco de dados mysql
 docker-compose up -d
+
+## comandos usados
+cd backend
+composer install
+php artisan install:api
+
+php artisan migrate
