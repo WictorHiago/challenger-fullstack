@@ -1,51 +1,136 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import authService from '../../services/authService'
 
 const router = useRouter()
 const toast = useToast()
 
+// Estado do formulário
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const formSubmitted = ref(false)
 
-const login = async () => {
+// Verificar se há um usuário válido ao montar o componente
+onMounted(() => {
+  // Remover qualquer token antigo ou inválido
+  const token = localStorage.getItem('token')
+  const user = localStorage.getItem('user')
+  
+  // Só redirecionar se houver token E dados do usuário
+  if (token && user) {
+    try {
+      // Verificar se os dados do usuário são válidos
+      const userData = JSON.parse(user)
+      if (userData && userData.id) {
+        // Usuário válido, redirecionar para a home
+        router.push('/')
+      } else {
+        // Dados inválidos, limpar localStorage
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
+    } catch (e) {
+      // Erro ao analisar os dados do usuário, limpar localStorage
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    }
+  }
+})
+
+// Função principal de login
+async function submitLogin() {
+  // Evitar múltiplas submissões
+  if (loading.value || formSubmitted.value) return
+  
+  // Marcar que o formulário foi submetido
+  formSubmitted.value = true
+  
+  // Limpar erro anterior
+  error.value = ''
+  
   // Validação básica
-  if (!email.value || !password.value) {
-    error.value = 'Email e senha são obrigatórios'
+  if (!email.value.trim()) {
+    error.value = 'O email é obrigatório'
+    toast.error(error.value, { timeout: 5000 })
+    formSubmitted.value = false
     return
   }
-
+  
+  if (!password.value) {
+    error.value = 'A senha é obrigatória'
+    toast.error(error.value, { timeout: 5000 })
+    formSubmitted.value = false
+    return
+  }
+  
+  // Iniciar loading
+  loading.value = true
+  
   try {
-    loading.value = true
+    // Chamada à API de login
+    const response = await authService.login({
+      email: email.value.trim(),
+      password: password.value
+    })
     
-    // Simulando login com dados estáticos
-    // Em uma implementação real, isso seria uma chamada à API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Login bem-sucedido
+    toast.success('Login realizado com sucesso!', { timeout: 3000 })
     
-    // Simular sucesso de login
-    if (email.value === 'admin@example.com' && password.value === 'password') {
-      localStorage.setItem('token', 'fake-jwt-token')
-      localStorage.setItem('userRole', 'admin')
-      toast.success('Login realizado com sucesso!')
-      router.push('/')
-    } else if (email.value === 'user@example.com' && password.value === 'password') {
-      localStorage.setItem('token', 'fake-jwt-token')
-      localStorage.setItem('userRole', 'user')
-      toast.success('Login realizado com sucesso!')
-      router.push('/')
-    } else {
-      error.value = 'Credenciais inválidas'
-      toast.error('Credenciais inválidas')
-    }
-  } catch (err) {
-    error.value = 'Ocorreu um erro ao fazer login'
-    toast.error('Ocorreu um erro ao fazer login')
+    // Redirecionar após um breve atraso para permitir que o toast seja visto
+    // setTimeout(() => {
+    //   router.push('/')
+    // }, 1500)
+    
+  } catch (err: any) {
+    console.error('Erro de login:', err)
+    handleLoginError(err)
   } finally {
     loading.value = false
+    // Permitir nova submissão após um breve atraso
+    setTimeout(() => {
+      formSubmitted.value = false
+    }, 1000)
   }
+}
+
+// Função para tratar erros de login
+function handleLoginError(err: any) {
+  // Erro de credenciais inválidas (401)
+  if (err.response && err.response.status === 401) {
+    error.value = 'Credenciais inválidas'
+    toast.error('Credenciais inválidas', { timeout: 7000 })
+    return
+  }
+  
+  // Erros de validação do servidor
+  if (err.response && err.response.data && err.response.data.errors) {
+    const validationErrors = Object.values(err.response.data.errors).flat()
+    error.value = validationErrors.join(', ')
+    toast.error(error.value, { timeout: 7000 })
+    return
+  }
+  
+  // Mensagem de erro específica do servidor
+  if (err.response && err.response.data && err.response.data.message) {
+    error.value = err.response.data.message
+    toast.error(error.value, { timeout: 7000 })
+    return
+  }
+  
+  // Erro de conexão com o servidor
+  if (err.message && err.message.includes('Network Error')) {
+    error.value = 'Não foi possível conectar ao servidor. Verifique sua conexão.'
+    toast.error(error.value, { timeout: 7000 })
+    return
+  }
+  
+  // Erro genérico
+  error.value = 'Ocorreu um erro ao fazer login. Tente novamente mais tarde.'
+  toast.error(error.value, { timeout: 7000 })
 }
 </script>
 
@@ -56,7 +141,7 @@ const login = async () => {
         <h1 class="text-center text-3xl font-extrabold text-blue-600">StoreManager</h1>
         <h2 class="mt-6 text-center text-2xl font-bold text-gray-900">Entre na sua conta</h2>
       </div>
-      <form class="mt-8 space-y-6" @submit.prevent="login">
+      <form class="mt-8 space-y-6" @submit.prevent="submitLogin" novalidate>
         <div class="rounded-md shadow-sm -space-y-px">
           <div>
             <label for="email-address" class="sr-only">Email</label>
@@ -86,7 +171,7 @@ const login = async () => {
           </div>
         </div>
 
-        <div class="text-red-500 text-sm" v-if="error">
+        <div class="text-red-500 text-sm font-bold p-2 mb-2 bg-red-50 rounded" v-if="error">
           {{ error }}
         </div>
 

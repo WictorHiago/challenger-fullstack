@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import authService from '../../services/authService'
 
 const router = useRouter()
 const toast = useToast()
@@ -27,20 +28,40 @@ const register = async () => {
 
   try {
     loading.value = true
+    error.value = ''
     
-    // Simulando registro com dados estáticos
-    // Em uma implementação real, isso seria uma chamada à API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Simular sucesso de registro
-    localStorage.setItem('token', 'fake-jwt-token')
-    localStorage.setItem('userRole', 'user') // Novos usuários são registrados como 'user'
+    // Chamada à API de registro usando o authService
+    const response = await authService.register({
+      name: name.value,
+      email: email.value,
+      password: password.value,
+      password_confirmation: passwordConfirmation.value,
+      role: 'user' // Por padrão, novos usuários são registrados como 'user'
+    })
     
     toast.success('Registro realizado com sucesso!')
     router.push('/')
-  } catch (err) {
-    error.value = 'Ocorreu um erro ao fazer o registro'
-    toast.error('Ocorreu um erro ao fazer o registro')
+  } catch (err: any) {
+    console.error('Erro de registro:', err)
+    
+    if (err.response && err.response.data) {
+      // Tratamento de erros da API
+      if (err.response.data.errors) {
+        // Erros de validação
+        const validationErrors = Object.values(err.response.data.errors).flat()
+        error.value = validationErrors.join(', ')
+        toast.error(error.value)
+      } else if (err.response.data.message) {
+        error.value = err.response.data.message
+        toast.error(error.value)
+      } else {
+        error.value = 'Ocorreu um erro ao fazer o registro'
+        toast.error('Ocorreu um erro ao fazer o registro')
+      }
+    } else {
+      error.value = 'Ocorreu um erro ao fazer o registro'
+      toast.error('Ocorreu um erro ao fazer o registro')
+    }
   } finally {
     loading.value = false
   }

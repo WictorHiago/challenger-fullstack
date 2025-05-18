@@ -2,26 +2,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import categoryService, { Category } from '../../services/categoryService'
+import authService from '../../services/authService'
 
 const router = useRouter()
 const toast = useToast()
 
 // Estado
-const categories = ref([
-  { id: 1, name: 'Eletrônicos', description: 'Produtos eletrônicos diversos' },
-  { id: 2, name: 'Computadores', description: 'Desktops e notebooks' },
-  { id: 3, name: 'Periféricos', description: 'Teclados, mouses, monitores e outros periféricos' },
-  { id: 4, name: 'Acessórios', description: 'Acessórios para dispositivos eletrônicos' },
-  { id: 5, name: 'Smartphones', description: 'Telefones celulares e smartphones' },
-  { id: 6, name: 'Áudio', description: 'Fones de ouvido, caixas de som e equipamentos de áudio' },
-  { id: 7, name: 'Jogos', description: 'Consoles e jogos' },
-  { id: 8, name: 'Redes', description: 'Equipamentos de rede e conectividade' }
-])
+const categories = ref<Category[]>([])
 
 const loading = ref(false)
 const searchTerm = ref('')
 const showDeleteModal = ref(false)
-const categoryToDelete = ref(null)
+const categoryToDelete = ref<Category | null>(null)
 
 // Dados filtrados
 const filteredCategories = computed(() => {
@@ -35,26 +28,85 @@ const filteredCategories = computed(() => {
 })
 
 // Verificar permissões do usuário
-const userRole = computed(() => localStorage.getItem('userRole') || '')
+const user = computed(() => {
+  const userStr = localStorage.getItem('user')
+  return userStr ? JSON.parse(userStr) : null
+})
+const userRole = computed(() => user.value?.role || '')
 const canEdit = computed(() => userRole.value === 'admin')
 const canDelete = computed(() => userRole.value === 'admin')
-const canCreate = computed(() => userRole.value === 'admin')
+const canCreate = computed(() => userRole.value === 'admin' || userRole.value === 'user')
+
+// Carregar categorias da API
+onMounted(async () => {
+  await fetchCategories()
+})
+
+async function fetchCategories() {
+  loading.value = true
+  try {
+    console.log('Token atual:', localStorage.getItem('token'))
+    console.log('Usuário atual:', localStorage.getItem('user'))
+    console.log('Iniciando busca de categorias...')
+    
+    categories.value = await categoryService.getCategories()
+    console.log('Categorias carregadas com sucesso:', categories.value)
+  } catch (error: any) {
+    console.error('Erro ao carregar categorias:', error)
+    
+    // Tratamento mais detalhado do erro
+    if (error.response) {
+      // O servidor respondeu com um status de erro
+      console.error('Status do erro:', error.response.status)
+      console.error('Dados do erro:', error.response.data)
+      
+      if (error.response.status === 500) {
+        toast.error('Erro interno no servidor. Contate o administrador.')
+      } else if (error.response.status === 401) {
+        toast.error('Sessão expirada. Faça login novamente.')
+        // Redirecionar para login após um breve atraso
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      } else {
+        toast.error(`Erro ao carregar categorias: ${error.response.data.message || 'Tente novamente mais tarde.'}`)
+      }
+    } else if (error.request) {
+      // A requisição foi feita mas não houve resposta
+      console.error('Sem resposta do servidor:', error.request)
+      toast.error('Não foi possível conectar ao servidor. Verifique sua conexão.')
+    } else {
+      // Erro na configuração da requisição
+      console.error('Erro na configuração da requisição:', error.message)
+      toast.error('Erro ao preparar a requisição. Tente novamente.')
+    }
+  } finally {
+    loading.value = false
+  }
+}
 
 // Métodos
-const confirmDelete = (category) => {
+const confirmDelete = (category: Category) => {
   categoryToDelete.value = category
   showDeleteModal.value = true
 }
 
-const deleteCategory = () => {
+const deleteCategory = async () => {
   if (!categoryToDelete.value) return
   
-  // Simulando deleção
-  categories.value = categories.value.filter(c => c.id !== categoryToDelete.value.id)
-  
-  toast.success('Categoria excluída com sucesso!')
-  showDeleteModal.value = false
-  categoryToDelete.value = null
+  loading.value = true
+  try {
+    await categoryService.deleteCategory(categoryToDelete.value.id)
+    toast.success('Categoria excluída com sucesso!')
+    await fetchCategories() // Recarregar a lista após excluir
+  } catch (error) {
+    console.error('Erro ao excluir categoria:', error)
+    toast.error('Erro ao excluir categoria. Tente novamente mais tarde.')
+  } finally {
+    showDeleteModal.value = false
+    categoryToDelete.value = null
+    loading.value = false
+  }
 }
 
 const cancelDelete = () => {

@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import categoryService, { Category, CategoryFormData } from '../../services/categoryService'
+import authService from '../../services/authService'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,10 +14,14 @@ const isEditing = computed(() => route.params.id !== undefined)
 const pageTitle = computed(() => isEditing.value ? 'Editar Categoria' : 'Nova Categoria')
 
 // Estado do formulário
-const category = ref({
-  id: null,
-  name: '',
-  description: ''
+const category = ref<{
+  id: number | null;
+  name: string;
+  description?: string;
+}>({ 
+  id: null, 
+  name: '', 
+  description: '' 
 })
 
 const loading = ref(false)
@@ -32,23 +38,15 @@ const loadCategory = async () => {
   loading.value = true
   
   try {
-    // Simulando carregamento de dados da API
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Dados estáticos para simulação
     const categoryId = Number(route.params.id)
-    const mockCategories = [
-      { id: 1, name: 'Eletrônicos', description: 'Produtos eletrônicos diversos' },
-      { id: 2, name: 'Computadores', description: 'Desktops e notebooks' },
-      { id: 3, name: 'Periféricos', description: 'Teclados, mouses, monitores e outros periféricos' },
-      { id: 4, name: 'Acessórios', description: 'Acessórios para dispositivos eletrônicos' },
-      { id: 5, name: 'Smartphones', description: 'Telefones celulares e smartphones' }
-    ]
-    
-    const foundCategory = mockCategories.find(c => c.id === categoryId)
+    const foundCategory = await categoryService.getCategory(categoryId)
     
     if (foundCategory) {
-      category.value = { ...foundCategory }
+      category.value = { 
+        id: foundCategory.id,
+        name: foundCategory.name,
+        description: ''
+      }
     } else {
       toast.error('Categoria não encontrada')
       router.push('/categories')
@@ -61,14 +59,10 @@ const loadCategory = async () => {
 }
 
 const validateForm = () => {
-  const newErrors = {}
+  const newErrors: Record<string, string> = {}
   
   if (!category.value.name) {
     newErrors.name = 'O nome da categoria é obrigatório'
-  }
-  
-  if (!category.value.description) {
-    newErrors.description = 'A descrição da categoria é obrigatória'
   }
   
   errors.value = newErrors
@@ -84,17 +78,36 @@ const saveCategory = async () => {
   loading.value = true
   
   try {
-    // Simulando salvamento na API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const formData: CategoryFormData = {
+      name: category.value.name
+    }
     
-    const successMessage = isEditing.value 
-      ? 'Categoria atualizada com sucesso!' 
-      : 'Categoria criada com sucesso!'
+    if (isEditing.value && category.value.id) {
+      await categoryService.updateCategory(category.value.id, formData)
+      toast.success('Categoria atualizada com sucesso!')
+    } else {
+      await categoryService.createCategory(formData)
+      toast.success('Categoria criada com sucesso!')
+    }
     
-    toast.success(successMessage)
     router.push('/categories')
-  } catch (error) {
-    toast.error('Erro ao salvar a categoria')
+  } catch (error: any) {
+    console.error('Erro ao salvar categoria:', error)
+    
+    if (error.response && error.response.data && error.response.data.errors) {
+      // Erros de validação do servidor
+      const serverErrors = error.response.data.errors
+      const newErrors: Record<string, string> = {}
+      
+      if (serverErrors.name) {
+        newErrors.name = serverErrors.name[0]
+      }
+      
+      errors.value = newErrors
+      toast.error('Por favor, corrija os erros no formulário')
+    } else {
+      toast.error('Erro ao salvar a categoria. Tente novamente mais tarde.')
+    }
   } finally {
     loading.value = false
   }

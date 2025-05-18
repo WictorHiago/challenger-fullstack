@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import authService from '../services/authService'
 
 const routes = [
   {
@@ -44,7 +45,7 @@ const routes = [
     path: '/categories/create',
     name: 'CreateCategory',
     component: () => import('../views/categories/CategoryForm.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true }
   },
   {
     path: '/categories/:id/edit',
@@ -61,9 +62,27 @@ const router = createRouter({
 
 // Navegação guard para verificar autenticação e permissões
 router.beforeEach((to, from, next) => {
-  // Implementação futura para verificar autenticação e permissões
-  // Por enquanto, permitiremos acesso a todas as rotas
-  next()
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const isAuthenticated = authService.isAuthenticated()
+  const isAdmin = authService.isAdmin()
+
+  // Se a rota requer autenticação e o usuário não está autenticado
+  if (requiresAuth && !isAuthenticated) {
+    next({ name: 'Login' })
+  }
+  // Se a rota requer role de admin e o usuário não é admin
+  else if (requiresAdmin && !isAdmin) {
+    next({ name: 'Home' }) // Redireciona para a home se não tiver permissão
+  }
+  // Se o usuário já está autenticado e tenta acessar login/register
+  else if (isAuthenticated && (to.name === 'Login' || to.name === 'Register')) {
+    next({ name: 'Home' })
+  }
+  // Em todos os outros casos, permite o acesso
+  else {
+    next()
+  }
 })
 
 export default router
