@@ -2,10 +2,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import productService from '../../services/productService'
+import categoryService from '../../services/categoryService'
+import authService from '../../services/authService'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+
+// Verificar permissões do usuário
+const currentUser = computed(() => authService.getCurrentUser())
+const userRole = computed(() => currentUser.value?.role || '')
+const isAdmin = computed(() => userRole.value === 'admin')
+
+// Redirecionar se não for admin
+onMounted(() => {
+  if (!isAdmin.value) {
+    toast.error('Você não tem permissão para acessar esta página')
+    router.push('/products')
+    return
+  }
+  
+  // Carregar categorias
+  fetchCategories()
+  
+  // Carregar produto se estiver editando
+  if (isEditing.value) {
+    loadProduct()
+  }
+})
 
 // Determinar se estamos editando ou criando
 const isEditing = computed(() => route.params.id !== undefined)
@@ -21,55 +46,43 @@ const product = ref({
   category_id: ''
 })
 
-// Dados estáticos para desenvolvimento
-const categories = ref([
-  { id: 1, name: 'Eletrônicos' },
-  { id: 2, name: 'Computadores' },
-  { id: 3, name: 'Periféricos' },
-  { id: 4, name: 'Acessórios' },
-  { id: 5, name: 'Smartphones' }
-])
-
+// Dados de categorias da API
+const categories = ref([])
 const loading = ref(false)
 const errors = ref({})
 
-// Carregar dados do produto se estiver editando
-onMounted(() => {
-  if (isEditing.value) {
-    loadProduct()
+// Carregar categorias da API
+async function fetchCategories() {
+  try {
+    const data = await categoryService.getCategories()
+    categories.value = data
+  } catch (error) {
+    console.error('Erro ao carregar categorias:', error)
+    toast.error('Erro ao carregar categorias. Tente novamente mais tarde.')
   }
-})
+}
 
 const loadProduct = async () => {
   loading.value = true
   
   try {
-    // Simulando carregamento de dados da API
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Dados estáticos para simulação
     const productId = Number(route.params.id)
-    const mockProducts = [
-      { id: 1, name: 'Smartphone XYZ', description: 'Um smartphone de última geração', price: 1999.90, image_url: 'https://via.placeholder.com/150', category_id: 1 },
-      { id: 2, name: 'Notebook Ultra', description: 'Notebook leve e potente', price: 4599.90, image_url: 'https://via.placeholder.com/150', category_id: 2 },
-      { id: 3, name: 'Monitor 27"', description: 'Monitor de alta resolução', price: 1299.90, image_url: 'https://via.placeholder.com/150', category_id: 3 },
-      { id: 4, name: 'Teclado Mecânico', description: 'Teclado para gamers', price: 349.90, image_url: 'https://via.placeholder.com/150', category_id: 3 },
-      { id: 5, name: 'Mouse Gamer', description: 'Mouse de alta precisão', price: 199.90, image_url: 'https://via.placeholder.com/150', category_id: 3 }
-    ]
+    const data = await productService.getProduct(productId)
     
-    const foundProduct = mockProducts.find(p => p.id === productId)
-    
-    if (foundProduct) {
+    if (data) {
       product.value = { 
-        ...foundProduct,
-        price: foundProduct.price.toString()
+        ...data,
+        price: data.price.toString(),
+        category_id: data.category?.id || ''
       }
     } else {
       toast.error('Produto não encontrado')
       router.push('/products')
     }
   } catch (error) {
-    toast.error('Erro ao carregar o produto')
+    console.error('Erro ao carregar o produto:', error)
+    toast.error('Erro ao carregar o produto. Tente novamente mais tarde.')
+    router.push('/products')
   } finally {
     loading.value = false
   }
@@ -115,17 +128,34 @@ const saveProduct = async () => {
   loading.value = true
   
   try {
-    // Simulando salvamento na API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Preparar dados do produto
+    const productData = {
+      ...product.value,
+      price: parseFloat(product.value.price)
+    }
     
-    const successMessage = isEditing.value 
-      ? 'Produto atualizado com sucesso!' 
-      : 'Produto criado com sucesso!'
+    // Salvar ou atualizar o produto
+    if (isEditing.value) {
+      await productService.updateProduct(product.value.id, productData)
+      toast.success('Produto atualizado com sucesso!')
+    } else {
+      await productService.createProduct(productData)
+      toast.success('Produto criado com sucesso!')
+    }
     
-    toast.success(successMessage)
     router.push('/products')
   } catch (error) {
-    toast.error('Erro ao salvar o produto')
+    console.error('Erro ao salvar o produto:', error)
+    if (error.response && error.response.data && error.response.data.errors) {
+      // Mapear erros de validação da API
+      const apiErrors = error.response.data.errors
+      Object.keys(apiErrors).forEach(key => {
+        errors.value[key] = apiErrors[key][0]
+      })
+      toast.error('Por favor, corrija os erros no formulário')
+    } else {
+      toast.error('Erro ao salvar o produto. Tente novamente mais tarde.')
+    }
   } finally {
     loading.value = false
   }
@@ -133,6 +163,33 @@ const saveProduct = async () => {
 
 const cancel = () => {
   router.push('/products')
+}
+
+// Formatar entrada de preço para garantir formato correto (00.00)
+const formatPriceInput = (event) => {
+  let value = event.target.value;
+  
+  // Remove todos os caracteres não numéricos, exceto ponto
+  value = value.replace(/[^0-9.]/g, '');
+  
+  // Garante que só existe um ponto decimal
+  const parts = value.split('.');
+  if (parts.length > 2) {
+    value = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  // Limita a 2 casas decimais
+  if (parts.length > 1 && parts[1].length > 2) {
+    value = parts[0] + '.' + parts[1].substring(0, 2);
+  }
+  
+  // Limita o valor a 9999999.99
+  if (parseFloat(value) > 9999999.99) {
+    value = '9999999.99';
+  }
+  
+  // Atualiza o valor
+  product.value.price = value;
 }
 </script>
 
@@ -146,8 +203,17 @@ const cancel = () => {
       </p>
     </div>
 
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="ml-3 text-lg text-gray-700">{{ isEditing ? 'Carregando produto...' : 'Preparando formulário...' }}</span>
+    </div>
+    
     <!-- Form -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div v-else class="bg-white shadow rounded-lg overflow-hidden">
       <form @submit.prevent="saveProduct" class="p-6 space-y-6">
         <!-- Name -->
         <div>
@@ -187,8 +253,12 @@ const cancel = () => {
             class="form-input"
             :class="{ 'border-red-500': errors.price }"
             placeholder="0.00"
+            @input="formatPriceInput"
+            pattern="^\d+(\.\d{1,2})?$"
+            title="Insira um valor no formato 0.00"
           />
           <p v-if="errors.price" class="mt-1 text-sm text-red-600">{{ errors.price }}</p>
+          <p class="mt-1 text-sm text-gray-500">Formato: 0.00 (use ponto como separador decimal)</p>
         </div>
 
         <!-- Category -->

@@ -81,9 +81,9 @@ async function submitLogin() {
     toast.success('Login realizado com sucesso!', { timeout: 3000 })
     
     // Redirecionar após um breve atraso para permitir que o toast seja visto
-    // setTimeout(() => {
-    //   router.push('/')
-    // }, 1500)
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
     
   } catch (err: any) {
     console.error('Erro de login:', err)

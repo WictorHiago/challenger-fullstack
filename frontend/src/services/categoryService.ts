@@ -24,15 +24,10 @@ export const categoryService = {
    */
   async getCategories(): Promise<Category[]> {
     try {
-      console.log('Buscando categorias...');
-      const token = localStorage.getItem('token');
-      console.log('Token:', token ? 'Token existe' : 'Token não existe');
-      
       const response = await api.get('/categories');
-      console.log('Resposta da API de categorias:', response.data);
-      return response.data;
+      return response.data.categories || [];
     } catch (error) {
-      console.error('Erro detalhado ao buscar categorias:', error);
+      console.error('Erro ao buscar categorias:', error);
       throw error;
     }
   },
@@ -43,7 +38,7 @@ export const categoryService = {
    */
   async getCategory(id: number): Promise<Category> {
     const response = await api.get(`/categories/${id}`);
-    return response.data;
+    return response.data.category;
   },
 
   /**
@@ -52,7 +47,7 @@ export const categoryService = {
    */
   async createCategory(data: CategoryFormData): Promise<Category> {
     const response = await api.post('/categories', data);
-    return response.data;
+    return response.data.category;
   },
 
   /**
@@ -62,7 +57,7 @@ export const categoryService = {
    */
   async updateCategory(id: number, data: CategoryFormData): Promise<Category> {
     const response = await api.put(`/categories/${id}`, data);
-    return response.data;
+    return response.data.category;
   },
 
   /**

@@ -21,7 +21,7 @@ interface AuthResponse {
     role: string;
   };
   token: string;
-  message: string;
+  message?: string;
 }
 
 export const authService = {

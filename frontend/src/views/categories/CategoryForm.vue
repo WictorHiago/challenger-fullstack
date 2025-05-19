@@ -17,18 +17,28 @@ const pageTitle = computed(() => isEditing.value ? 'Editar Categoria' : 'Nova Ca
 const category = ref<{
   id: number | null;
   name: string;
-  description?: string;
 }>({ 
   id: null, 
   name: '', 
-  description: '' 
 })
 
 const loading = ref(false)
 const errors = ref({})
 
-// Carregar dados da categoria se estiver editando
+// Verificar permissões do usuário
+const currentUser = computed(() => authService.getCurrentUser())
+const userRole = computed(() => currentUser.value?.role || '')
+const isAdmin = computed(() => userRole.value === 'admin')
+
+// Carregar dados da categoria se estiver editando e verificar permissões
 onMounted(() => {
+  // Verificar se o usuário é admin
+  if (!isAdmin.value) {
+    toast.error('Você não tem permissão para acessar esta página')
+    router.push('/categories')
+    return
+  }
+  
   if (isEditing.value) {
     loadCategory()
   }
@@ -45,7 +55,6 @@ const loadCategory = async () => {
       category.value = { 
         id: foundCategory.id,
         name: foundCategory.name,
-        description: ''
       }
     } else {
       toast.error('Categoria não encontrada')
@@ -128,8 +137,17 @@ const cancel = () => {
       </p>
     </div>
 
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="ml-3 text-lg text-gray-700">{{ isEditing ? 'Carregando categoria...' : 'Preparando formulário...' }}</span>
+    </div>
+    
     <!-- Form -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div v-else class="bg-white shadow rounded-lg overflow-hidden">
       <form @submit.prevent="saveCategory" class="p-6 space-y-6">
         <!-- Name -->
         <div>
@@ -143,20 +161,6 @@ const cancel = () => {
             placeholder="Nome da categoria"
           />
           <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
-        </div>
-
-        <!-- Description -->
-        <div>
-          <label for="description" class="form-label">Descrição</label>
-          <textarea
-            id="description"
-            v-model="category.description"
-            rows="3"
-            class="form-input"
-            :class="{ 'border-red-500': errors.description }"
-            placeholder="Descrição detalhada da categoria"
-          ></textarea>
-          <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
         </div>
 
         <!-- Form Actions -->

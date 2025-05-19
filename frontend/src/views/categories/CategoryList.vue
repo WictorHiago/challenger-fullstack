@@ -27,15 +27,12 @@ const filteredCategories = computed(() => {
   )
 })
 
-// Verificar permissões do usuário
-const user = computed(() => {
-  const userStr = localStorage.getItem('user')
-  return userStr ? JSON.parse(userStr) : null
-})
-const userRole = computed(() => user.value?.role || '')
+// Verificar permissões do usuário usando authService
+const currentUser = computed(() => authService.getCurrentUser())
+const userRole = computed(() => currentUser.value?.role || '')
 const canEdit = computed(() => userRole.value === 'admin')
 const canDelete = computed(() => userRole.value === 'admin')
-const canCreate = computed(() => userRole.value === 'admin' || userRole.value === 'user')
+const canCreate = computed(() => userRole.value === 'admin') // Apenas admin pode criar categorias
 
 // Carregar categorias da API
 onMounted(async () => {
@@ -160,8 +157,17 @@ const cancelDelete = () => {
       </div>
     </div>
 
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="flex justify-center items-center py-12">
+      <svg class="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="ml-3 text-lg text-gray-700">Carregando categorias...</span>
+    </div>
+    
     <!-- Categories Table -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div v-else class="bg-white shadow rounded-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
@@ -186,20 +192,28 @@ const cancelDelete = () => {
                 <div class="text-sm text-gray-500">{{ category.description }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex justify-end space-x-2">
+                <div class="flex justify-end space-x-3">
                   <router-link 
                     v-if="canEdit"
                     :to="`/categories/${category.id}/edit`" 
-                    class="text-indigo-600 hover:text-indigo-900"
+                    class="text-indigo-600 hover:text-indigo-900 flex items-center"
+                    title="Editar categoria"
                   >
-                    Editar
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    <span class="ml-1">Editar</span>
                   </router-link>
                   <button 
                     v-if="canDelete"
                     @click="confirmDelete(category)" 
-                    class="text-red-600 hover:text-red-900"
+                    class="text-red-600 hover:text-red-900 flex items-center"
+                    title="Excluir categoria"
                   >
-                    Excluir
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    <span class="ml-1">Excluir</span>
                   </button>
                 </div>
               </td>
@@ -214,46 +228,40 @@ const cancelDelete = () => {
       </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="fixed z-10 inset-0 overflow-y-auto">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+    <!-- Delete Confirmation Modal - Versão simplificada -->
+    <div v-if="showDeleteModal" class="fixed inset-0 flex items-center justify-center z-50" style="background-color: rgba(0,0,0,0.5);">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div class="flex items-start mb-4">
+          <div class="flex-shrink-0 bg-red-100 rounded-full p-2 mr-3">
+            <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-medium text-gray-900">Excluir categoria</h3>
+            <p class="mt-2 text-sm text-gray-500">
+              Tem certeza que deseja excluir a categoria "{{ categoryToDelete?.name }}"? Esta ação não pode ser desfeita.
+            </p>
+            <p class="mt-2 text-sm text-red-500">
+              Atenção: Excluir esta categoria pode afetar produtos associados a ela.
+            </p>
+          </div>
         </div>
-
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">
-                  Excluir categoria
-                </h3>
-                <div class="mt-2">
-                  <p class="text-sm text-gray-500">
-                    Tem certeza que deseja excluir a categoria "{{ categoryToDelete?.name }}"? Esta ação não pode ser desfeita.
-                  </p>
-                  <p class="mt-2 text-sm text-red-500">
-                    Atenção: Excluir esta categoria pode afetar produtos associados a ela.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button @click="deleteCategory" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-              Excluir
-            </button>
-            <button @click="cancelDelete" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-              Cancelar
-            </button>
-          </div>
+        <div class="flex justify-end space-x-3 mt-6">
+          <button 
+            type="button" 
+            class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+            @click="cancelDelete"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="button" 
+            class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700 focus:outline-none"
+            @click="deleteCategory"
+          >
+            Excluir
+          </button>
         </div>
       </div>
     </div>

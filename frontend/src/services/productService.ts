@@ -58,8 +58,71 @@ export const productService = {
       Object.assign(params, { search });
     }
     
-    const response = await api.get('/products', { params });
-    return response.data;
+    try {
+      const response = await api.get('/products', { params });
+      console.log('Resposta bruta da API de produtos:', response.data);
+      
+      // Verificar diferentes formatos possíveis da resposta
+      if (response.data.data) {
+        // Formato padrão do Laravel Resource Collection
+        return response.data;
+      } else if (response.data.products) {
+        // Formato personalizado com campo 'products'
+        return {
+          current_page: 1,
+          data: response.data.products,
+          first_page_url: '',
+          from: 1,
+          last_page: 1,
+          last_page_url: '',
+          links: [],
+          next_page_url: null,
+          path: '',
+          per_page: response.data.products.length,
+          prev_page_url: null,
+          to: response.data.products.length,
+          total: response.data.products.length
+        };
+      } else if (Array.isArray(response.data)) {
+        // Array direto de produtos
+        return {
+          current_page: 1,
+          data: response.data,
+          first_page_url: '',
+          from: 1,
+          last_page: 1,
+          last_page_url: '',
+          links: [],
+          next_page_url: null,
+          path: '',
+          per_page: response.data.length,
+          prev_page_url: null,
+          to: response.data.length,
+          total: response.data.length
+        };
+      } else {
+        // Fallback para array vazio
+        console.error('Formato de resposta não reconhecido:', response.data);
+        return {
+          current_page: 1,
+          data: [],
+          first_page_url: '',
+          from: 0,
+          last_page: 1,
+          last_page_url: '',
+          links: [],
+          next_page_url: null,
+          path: '',
+          per_page: 0,
+          prev_page_url: null,
+          to: 0,
+          total: 0
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+      throw error;
+    }
   },
 
   /**
@@ -77,7 +140,7 @@ export const productService = {
    */
   async getProduct(id: number): Promise<Product> {
     const response = await api.get(`/products/${id}`);
-    return response.data;
+    return response.data.product;
   },
 
   /**
@@ -86,7 +149,7 @@ export const productService = {
    */
   async createProduct(data: ProductFormData): Promise<Product> {
     const response = await api.post('/products', data);
-    return response.data;
+    return response.data.product;
   },
 
   /**
@@ -96,7 +159,7 @@ export const productService = {
    */
   async updateProduct(id: number, data: Partial<ProductFormData>): Promise<Product> {
     const response = await api.put(`/products/${id}`, data);
-    return response.data;
+    return response.data.product;
   },
 
   /**

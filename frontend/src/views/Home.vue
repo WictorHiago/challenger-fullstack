@@ -1,24 +1,57 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import productService from '../services/productService'
+import categoryService from '../services/categoryService'
+import authService from '../services/authService'
 
-// Simulando dados estáticos para o dashboard
+// Dados do dashboard
 const stats = ref([
-  { name: 'Total de Produtos', value: '124', icon: 'box' },
-  { name: 'Total de Categorias', value: '12', icon: 'tag' },
-  { name: 'Vendas do Mês', value: 'R$ 24.500', icon: 'chart' },
-  { name: 'Usuários Ativos', value: '38', icon: 'user' }
+  { name: 'Total de Produtos', value: '0', icon: 'box' },
+  { name: 'Total de Categorias', value: '0', icon: 'tag' },
+  { name: 'Vendas do Mês', value: 'R$ 0,00', icon: 'chart' },
+  { name: 'Usuários Ativos', value: '0', icon: 'user' }
 ])
 
-const recentProducts = ref([
-  { id: 1, name: 'Smartphone XYZ', category: 'Eletrônicos', price: 'R$ 1.999,00', created_at: '2025-05-15' },
-  { id: 2, name: 'Notebook Ultra', category: 'Computadores', price: 'R$ 4.599,00', created_at: '2025-05-14' },
-  { id: 3, name: 'Monitor 27"', category: 'Periféricos', price: 'R$ 1.299,00', created_at: '2025-05-13' },
-  { id: 4, name: 'Teclado Mecânico', category: 'Periféricos', price: 'R$ 349,00', created_at: '2025-05-12' },
-  { id: 5, name: 'Mouse Gamer', category: 'Periféricos', price: 'R$ 199,00', created_at: '2025-05-11' }
-])
+const recentProducts = ref([])
+const loading = ref(true)
 
-const isLoggedIn = computed(() => localStorage.getItem('token') !== null)
-const userRole = computed(() => localStorage.getItem('userRole') || '')
+// Verificar autenticação
+const isLoggedIn = computed(() => authService.isAuthenticated())
+const currentUser = computed(() => authService.getCurrentUser())
+const userRole = computed(() => currentUser.value?.role || '')
+
+// Carregar dados ao montar o componente
+onMounted(async () => {
+  if (isLoggedIn.value) {
+    try {
+      // Carregar produtos
+      const productsResponse = await productService.getProducts()
+      if (productsResponse && productsResponse.data) {
+        // Atualizar estatísticas
+        stats.value[0].value = productsResponse.total?.toString() || productsResponse.data.length.toString()
+        
+        // Obter produtos recentes (últimos 5)
+        recentProducts.value = productsResponse.data.slice(0, 5).map(product => ({
+          id: product.id,
+          name: product.name,
+          category: product.category?.name || 'Sem categoria',
+          price: `R$ ${Number(product.price).toFixed(2).replace('.', ',')}`,
+          created_at: new Date(product.created_at).toLocaleDateString('pt-BR')
+        }))
+      }
+      
+      // Carregar categorias
+      const categoriesResponse = await categoryService.getCategories()
+      if (categoriesResponse) {
+        stats.value[1].value = categoriesResponse.length.toString()
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+})
 </script>
 
 <template>

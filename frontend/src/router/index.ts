@@ -5,7 +5,8 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/Home.vue')
+    component: () => import('../views/Home.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
@@ -51,6 +52,12 @@ const routes = [
     path: '/categories/:id/edit',
     name: 'EditCategory',
     component: () => import('../views/categories/CategoryForm.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/users',
+    name: 'Users',
+    component: () => import('../views/users/UserList.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
