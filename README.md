@@ -26,13 +26,12 @@ A API implementa controle de acesso baseado em roles:
 - **Usuários com role "user"** podem:
   - Listar produtos e categorias
   - Ver detalhes de produtos e categorias
-  - Criar produtos
-  - Buscar produtos
+  - Ver seu próprio perfil
 
 - **Usuários com role "admin"** podem:
   - Realizar todas as operações que um usuário comum pode
-  - Gerenciar usuários (listar, criar, editar, excluir)
-  - Editar e excluir produtos
+  - Gerenciar usuários (listar, ver detalhes, editar, excluir)
+  - Criar, editar e excluir produtos
   - Criar, editar e excluir categorias
 
 ### Autenticação
@@ -74,7 +73,6 @@ Body
 
 Response
 {
-  "message": "Login successful",
   "user": {
     "id": 1,
     "name": "oliver souza",
@@ -94,26 +92,28 @@ Authorization: Bearer {token}
 
 Response
 {
-  "message": "Successfully logged out"
+  "message": "Logout realizado com sucesso"
 }
 ```
 
 #### Get User Profile
 ```
-GET http://localhost:8000/api/user
+GET http://localhost:8000/api/profile
 
 Headers
 Authorization: Bearer {token}
 
 Response
 {
-  "message": "User retrieved successfully",
   "user": {
     "id": 1,
-    "name": "oliver souza",
-    "email": "oliver.souza@gmail.com",
-    "role": "admin"
-  }
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "user",
+    "created_at": "2025-05-17T14:00:00.000000Z",
+    "updated_at": "2025-05-17T14:00:00.000000Z"
+  },
+  "token": "1|abcdefghijklmnopqrstuvwxyz1234567890"
 }
 ```
 
@@ -128,25 +128,18 @@ Authorization: Bearer {token}
 
 Response
 {
-  "current_page": 1,
-  "data": [
+  "products": [
     {
       "id": 1,
       "name": "Produto Exemplo",
       "description": "Descrição do produto exemplo",
       "price": "99.99",
-      "validity_date": "2025-12-31",
-      "image": "produto.jpg",
       "image_url": "https://exemplo.com/images/produto.jpg",
       "category_id": 1,
-      "category": {
-        "id": 1,
-        "name": "Categoria Exemplo"
-      }
+      "created_at": "2025-05-17T14:00:00.000000Z",
+      "updated_at": "2025-05-17T14:00:00.000000Z"
     }
-  ],
-  "per_page": 10,
-  "total": 1
+  ]
 }
 ```
 
@@ -173,17 +166,15 @@ Exemplo: GET http://localhost:8000/api/products/1
 
 Response
 {
-  "id": 1,
-  "name": "Produto Exemplo",
-  "description": "Descrição do produto exemplo",
-  "price": "99.99",
-  "validity_date": "2025-12-31",
-  "image": "produto.jpg",
-  "image_url": "https://exemplo.com/images/produto.jpg",
-  "category_id": 1,
-  "category": {
+  "product": {
     "id": 1,
-    "name": "Categoria Exemplo"
+    "name": "Produto Exemplo",
+    "description": "Descrição do produto exemplo",
+    "price": "99.99",
+    "image_url": "https://exemplo.com/images/produto.jpg",
+    "category_id": 1,
+    "created_at": "2025-05-17T14:00:00.000000Z",
+    "updated_at": "2025-05-17T14:00:00.000000Z"
   }
 }
 ```
@@ -208,16 +199,16 @@ Body
 
 Response
 {
-  "name": "Novo Produto",
-  "description": "Descrição do novo produto",
-  "price": "129.99",
-  "validity_date": "2025-12-31",
-  "image": "novo-produto.jpg",
-  "image_url": "https://exemplo.com/images/novo-produto.jpg",
-  "category_id": 1,
-  "updated_at": "2025-05-17T14:30:00.000000Z",
-  "created_at": "2025-05-17T14:30:00.000000Z",
-  "id": 2
+  "product": {
+    "name": "Novo Produto",
+    "description": "Descrição do novo produto",
+    "price": "129.99",
+    "image_url": "https://exemplo.com/images/novo-produto.jpg",
+    "category_id": 1,
+    "updated_at": "2025-05-17T14:35:00.000000Z",
+    "created_at": "2025-05-17T14:35:00.000000Z",
+    "id": 2
+  }
 }
 ```
 
@@ -239,14 +230,16 @@ Body
 
 Response
 {
-  "id": 1,
-  "name": "Produto Atualizado",
-  "description": "Descrição do produto exemplo",
-  "price": "149.99",
-  "validity_date": "2025-12-31",
-  "image": "produto.jpg",
-  "image_url": "https://exemplo.com/images/produto.jpg",
-  "category_id": 1
+  "product": {
+    "id": 1,
+    "name": "Produto Atualizado",
+    "description": "Descrição do produto exemplo",
+    "price": "149.99",
+    "image_url": "https://exemplo.com/images/produto.jpg",
+    "category_id": 1,
+    "created_at": "2025-05-17T14:00:00.000000Z",
+    "updated_at": "2025-05-17T14:35:00.000000Z"
+  }
 }
 ```
 
@@ -261,7 +254,7 @@ Exemplo: DELETE http://localhost:8000/api/products/1
 
 Response
 {
-  "message": "Product deleted successfully"
+  "message": "Produto deletado com sucesso"
 }
 ```
 
@@ -275,14 +268,16 @@ Headers
 Authorization: Bearer {token}
 
 Response
-[
-  {
-    "id": 1,
-    "name": "Categoria Exemplo",
-    "created_at": "2025-05-17T14:00:00.000000Z",
-    "updated_at": "2025-05-17T14:00:00.000000Z"
-  }
-]
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Categoria Exemplo",
+      "created_at": "2025-05-17T14:00:00.000000Z",
+      "updated_at": "2025-05-17T14:00:00.000000Z"
+    }
+  ]
+}
 ```
 
 #### Obter Categoria Específica [user, admin]
@@ -296,10 +291,12 @@ Exemplo: GET http://localhost:8000/api/categories/1
 
 Response
 {
-  "id": 1,
-  "name": "Categoria Exemplo",
-  "created_at": "2025-05-17T14:00:00.000000Z",
-  "updated_at": "2025-05-17T14:00:00.000000Z"
+  "category": {
+    "id": 1,
+    "name": "Categoria Exemplo",
+    "created_at": "2025-05-17T14:00:00.000000Z",
+    "updated_at": "2025-05-17T14:00:00.000000Z"
+  }
 }
 ```
 
@@ -318,10 +315,12 @@ Body
 
 Response
 {
-  "name": "Nova Categoria",
-  "updated_at": "2025-05-17T14:35:00.000000Z",
-  "created_at": "2025-05-17T14:35:00.000000Z",
-  "id": 2
+  "category": {
+    "name": "Nova Categoria",
+    "updated_at": "2025-05-17T14:35:00.000000Z",
+    "created_at": "2025-05-17T14:35:00.000000Z",
+    "id": 2
+  }
 }
 ```
 
@@ -342,10 +341,12 @@ Body
 
 Response
 {
-  "id": 1,
-  "name": "Categoria Atualizada",
-  "created_at": "2025-05-17T14:00:00.000000Z",
-  "updated_at": "2025-05-17T14:40:00.000000Z"
+  "category": {
+    "id": 1,
+    "name": "Categoria Atualizada",
+    "created_at": "2025-05-17T14:00:00.000000Z",
+    "updated_at": "2025-05-17T14:40:00.000000Z"
+  }
 }
 ```
 
@@ -360,7 +361,7 @@ Exemplo: DELETE http://localhost:8000/api/categories/1
 
 Response
 {
-  "message": "Category deleted successfully"
+  "message": "Categoria deletada com sucesso"
 }
 ```
 
@@ -375,8 +376,7 @@ Authorization: Bearer {token}
 
 Response
 {
-  "current_page": 1,
-  "data": [
+  "users": [
     {
       "id": 1,
       "name": "Admin User",
@@ -410,12 +410,14 @@ Exemplo: GET http://localhost:8000/api/users/2
 
 Response
 {
-  "id": 2,
-  "name": "Regular User",
-  "email": "user@example.com",
-  "role": "user",
-  "created_at": "2025-05-17T14:05:00.000000Z",
-  "updated_at": "2025-05-17T14:05:00.000000Z"
+  "user": {
+    "id": 2,
+    "name": "Regular User",
+    "email": "user@example.com",
+    "role": "user",
+    "created_at": "2025-05-17T14:05:00.000000Z",
+    "updated_at": "2025-05-17T14:05:00.000000Z"
+  }
 }
 ```
 
@@ -484,7 +486,7 @@ Exemplo: DELETE http://localhost:8000/api/users/3
 
 Response
 {
-  "message": "User deleted successfully"
+  "message": "Usuário deletado com sucesso"
 }
 ```
 
