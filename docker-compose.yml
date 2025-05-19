@@ -8,8 +8,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: challenge_fullstack
-      MYSQL_USER: admin@admin
-      MYSQL_PASSWORD: admin@admin
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
     ports:
       - "3306:3306"
     volumes:
