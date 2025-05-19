@@ -1,5 +1,44 @@
 # challenger-fullstack
-Sistema de Gerenciamento de Produtos desenvolvido como desafio. O projeto fullstack utiliza Vue 3 + TypeScript no front-end e Laravel 10 + MySQL no back-end.
+Sistema de Gerenciamento de Produtos desenvolvido como desafio. O projeto fullstack utiliza Vue 3 + TypeScript no front-end e Laravel 11 + MySQL no back-end.
+
+## Screenshots do Projeto
+
+### Tela de Login
+![Tela de Login](https://github.com/WictorHiago/challenger-fullstack/blob/main/assets/image1.png)
+
+### Tela de Registro
+![Tela de Registro](https://github.com/WictorHiago/challenger-fullstack/blob/main/assets/image2.png)
+
+### Lista de Produtos
+![Lista de Produtos](https://github.com/WictorHiago/challenger-fullstack/blob/main/assets/image3.png)
+
+### Formulário de Produto
+![Formulário de Produto](https://github.com/WictorHiago/challenger-fullstack/blob/main/assets/image4.png)
+
+## Requisitos
+
+- PHP 8.2 ou superior
+- Laravel 11 ou superior
+- Node.js 18 ou superior
+- MySQL 8.0 ou superior
+
+## Tecnologias Utilizadas
+
+### Backend
+- Laravel 11 (Framework PHP)
+- Laravel Sanctum (Autenticação por Token)
+- MySQL (Banco de Dados)
+- API RESTful
+
+### Frontend
+- Vue.js 3 (Framework JavaScript)
+- TypeScript
+- Vite (Build Tool)
+- Tailwind CSS (Framework CSS)
+- Axios (Cliente HTTP)
+
+### Arquitetura
+O projeto foi desenvolvido com uma arquitetura desacoplada, onde o frontend e o backend são completamente independentes, o que torna o projeto mais bem estruturado e fácil de manter. A comunicação entre as camadas é feita através de API REST com formato JSON, utilizando services no frontend para consumir os endpoints do backend.
 
 ## Instalação do projeto
 
