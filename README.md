@@ -9,12 +9,28 @@ docker-compose up -d
 ```
 
 ### Comandos de instalação
+Você deve fazer um split do terminal ou usar duas janelas de terminais. Um para o backend e outro para o frontend.
+
+### backend
+
 ```
-cd backend
+# no diretorio raiz
 composer install
-php artisan install:api
+```
+
+```
+# no diretorio do backend
+cd laravel
 php artisan migrate
 php artisan db:seed
+```
+
+### frontend
+
+```
+# no diretorio frontend
+npm install
+npm run dev
 ```
 
 ## Documentação da API
